@@ -49,16 +49,23 @@ router.get("/:userId", (req: Request, res: Response) => {
 // add a new Item for userId
 router.post("/:userId", async (req: Request, res: Response) => {
   try {
+    const body = (await req.body) as Item;
     const id = req.params.userId;
 
-    if (id) {
-      let filterId = users.filter((i) => i.userId === id);
-      if (filterId === null) {
-        return res.status(404).json({
-          success: false,
-          message: "Forbidden access",
-        });
-      }
+    const result = zItemPostBody.safeParse(body);
+    if (!result.success) {
+      return res.status(400).json({
+        message: "Validation failed",
+        errors: result.error.issues[0]?.message,
+      });
+    }
+
+    const found = users.find((u) => u.userId === id);
+    if (found) {
+      return res.status(200).json({
+        success: true,
+        message: "user found",
+      });
     }
   } catch (err) {
     return res.status(500).json({
