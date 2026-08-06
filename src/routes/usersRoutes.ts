@@ -14,20 +14,54 @@ import { users } from "../db/db.ts";
 
 const router = Router();
 
+router.get("/me", (req: Request, res: Response) => {
+  return res.status(200).json({
+    success: true,
+  });
+});
+
 // POST /api/vXXX/auth/login
 router.post("/login", (req: Request, res: Response) => {
-  try { 
-    return res.status(200).json({
-      success: true,
-      message: "Login successful",
-    });
-  } catch (err) {
-    return res.status(500).json({
+  // 1. get username and password from body
+  const { username, password } = req.body;
+
+  // 2. check if user exists (search with username & password in DB)
+  const user = users.find(
+    (u) => u.username === username && u.password === password,
+  );
+
+  if (!user) {
+    return res.status(404).json({
       success: false,
-      message: "Something is wrong, please try again",
-      error: err,
+      message: "Invalid username or password",
     });
   }
+
+  // 3. create JWT token (with user info object as payload) using JWT_SECRET_KEY
+  const jwt_secret = process.env.JWT_SECRET || "this_is_my_secret_key";
+  const token = jwt.sign(
+    {
+      // app payload
+      username: user.username,
+      userId: user.userId,
+    },
+    jwt_secret,
+    { expiresIn: "10m" },
+  );
+  //    (optional: save the token as part of User data)
+  user.tokens = user.tokens ? [...user.tokens, token] : [token];
+
+  // 4. send HTTP response with JWT token
+  return res.status(200).json({
+    success: true,
+    message: "Login successful",
+    token: token,
+  });
+
+  return res.status(500).json({
+    success: false,
+    message: "POST /api/v2/users/login has not been implemented yet",
+  });
 });
 
 // POST /api/vXXX/auth/logout
